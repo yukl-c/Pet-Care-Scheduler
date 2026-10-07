@@ -1,0 +1,386 @@
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.TreeSet;
+
+public class PetCareScheduler {
+    public static Scanner scanner = new Scanner(System.in);
+    public static String getPetId() {
+        System.out.println("Input your pet Id.");
+        String id = scanner.nextLine();
+        return id;
+    }
+
+    public static String getPetName() {
+        System.out.println("Input your pet name.");
+        String name = scanner.nextLine();
+        return name;
+    }
+
+    public static String getPetSpecies() {
+        System.out.println("Input your pet species.");
+        String species = scanner.nextLine();
+        return species;
+    }
+
+    public static int getPetAge() {
+        System.out.println("Input your pet age.");
+        String ageStr = scanner.nextLine();
+        return Integer.valueOf(ageStr);
+    }
+
+    public static String getPetOwnerName() {
+        System.out.println("Input your pet owner's name.");
+        String ownerName = scanner.nextLine();
+        return ownerName;
+    }
+
+    public static String getPetContactInfo() {
+        System.out.println("Input your pet contact info.");
+        String contactInfo = scanner.nextLine();
+        return contactInfo;
+    }
+
+    public static Type getAppointmenType() {
+        System.out.println("Input the appointment Types (vet visit, vaccination, grooming, others).");
+        String typeStr = scanner.nextLine();
+        switch (typeStr) {
+            case "visit vet": 
+                return Type.VET_VISIT;
+            case "vaccination":
+                return Type.VACCINATION;
+            case "grooming":
+                return Type.GROOMING;
+            default:
+                return Type.OTHERS;
+        }
+    }
+
+    public static String getAppointmentNotes() {
+        System.out.println("Input the appointment notes.");
+        String notes = scanner.nextLine();
+        return notes;
+    }
+
+    public static LocalDate getAppointmentDate() {
+        System.out.println("Input the date in MM/dd/yyyy format:");
+        String appointmentDateStr = scanner.nextLine();
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+        LocalDate appointmentDate = LocalDate.parse(appointmentDateStr, dateFormatter);
+        return appointmentDate;
+    }
+
+    public static LocalTime getAppointmentTime() {
+        System.out.println("Input the time in HH:mm:ss format:");
+        String appointmentTimeStr = scanner.nextLine();
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+        LocalTime appointmentTime = LocalTime.parse(appointmentTimeStr, timeFormatter);
+        return appointmentTime;
+    }
+
+    public static Appointment createAppointment() {
+        Appointment newAppointment = null;
+        Type appointmentType = getAppointmenType();
+        String appointmentNotes = getAppointmentNotes();
+        System.out.println("Are you tracking the mood for a current day? y/n");
+        String isForCurrentDate = scanner.nextLine();
+        if (isForCurrentDate.equalsIgnoreCase("n")) {
+            LocalDate appointmentDate = getAppointmentDate();
+
+            LocalTime appointmentTime = getAppointmentTime();
+
+            if (appointmentNotes.strip().equals("")) {
+                newAppointment = new Appointment(appointmentType, appointmentDate, appointmentTime);
+            } else {
+                newAppointment = new Appointment(appointmentType, appointmentDate, appointmentTime, appointmentNotes);
+            }
+        } else {
+            if (appointmentNotes.strip().equals("")) {
+                newAppointment = new Appointment(appointmentType);
+            } else {
+                newAppointment = new Appointment(appointmentType, appointmentNotes);
+            }
+        }
+        return newAppointment;
+    }
+
+    public static boolean isPetValid(HashMap<String, Pet> petCareScheduler, Pet pet) throws InvalidPetException {
+        for (Pet p : petCareScheduler.values()) {
+            if (p.equals(pet)) {
+                throw new InvalidPetException();
+            }
+        }
+
+        return true;
+    }
+
+    public static boolean isAppointmentValid(TreeSet<Appointment> appointments, Appointment appointment) throws InvalidAppointmentException {
+        for (Appointment a : appointments) {
+            if (a.equals(appointment)) {
+                throw new InvalidAppointmentException();
+            }
+        }
+
+        return true;
+    }
+
+    public static Pet serachPetBaseOnId(HashMap<String, Pet> petCareScheduler, String petId) throws InvalidPetException {
+        Pet serachedPet = petCareScheduler.get(petId);
+        if (serachedPet == null) {
+            throw new InvalidPetException();
+        }
+        return serachedPet;
+    }
+
+    public static Pet serachPetBaseOnPetInfo(HashMap<String, Pet> petCareScheduler, String name, String ownerName, String contactInfo) throws InvalidPetException {
+        return petCareScheduler.values().stream()
+                .filter(pet -> name.equals(pet.getName())
+                                && ownerName.equals(pet.getOwnerName())
+                                && contactInfo.equals(pet.getContactInfo()))
+                .findFirst()
+                .orElseThrow(InvalidPetException::new);
+    }
+
+    public static Appointment searchAppointment(TreeSet<Appointment> appointments, Type type, LocalDate date, LocalTime time) throws InvalidAppointmentException  {
+        return appointments.stream()
+                    .filter(a -> a.getType().equals(type)
+                                    && a.getDate().equals(date)
+                                    && a.getTime().equals(time))
+                    .findFirst()
+                    .orElseThrow(InvalidAppointmentException::new);
+    }
+
+    public static String findPetId(HashMap<String, Pet> petCareScheduler, Pet pet) throws InvalidPetException {
+        return petCareScheduler.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(pet))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElseThrow(InvalidPetException::new);
+    }
+
+    @FunctionalInterface
+    public interface PetSearchOption {
+        void select() throws InvalidPetException;
+    }
+
+    public static void optionsForSerachingPet(PetSearchOption option1, PetSearchOption option2) throws InvalidPetException {
+        System.out.println("Enter '1' to serach by pet Id\n"
+                            + "Enter '2' to search by pet infomation.");
+        String serachVariant = scanner.nextLine();
+        if (serachVariant.equals("1")) {
+            option1.select();
+        }
+        else if (serachVariant.equals("2")) {
+            option2.select();
+        }
+        else {
+            System.out.println("Not a valid input!");
+        }
+    }
+
+    public static void main(String[] args)  {
+        
+        HashMap<String, Pet> petCareScheduler = new HashMap<>();
+
+        boolean isStay = true;
+
+        String petId;
+        String petName;
+        String petSpecies;
+        int petAge;
+        String petOwnerName;
+        String petContactInfo;
+        TreeSet<Appointment> appointments;
+        Appointment appointment;
+
+        String serachVariant;
+
+        while (isStay) {
+            System.out.println("Press 'r' to register pet\n"
+                    + "'sa' to schedule appointment(s)\n"
+                    + "'sd' to store data\n"
+                    + "'R' to get all records\n"
+                    + "'g' to generate the report to a file\n"
+                    + "Type 'Exit' to exit");
+            String menuOption = scanner.nextLine();
+
+            switch (menuOption) {
+                case "r":
+                    try {
+                        petId = "PET_" + (Integer.toString(petCareScheduler.size() + 1));
+                        petName = getPetName();
+                        petSpecies = getPetSpecies();
+                        petAge = getPetAge();
+                        petOwnerName = getPetOwnerName();
+                        petContactInfo = getPetContactInfo();
+                        Pet newPet = new Pet(petId, petName, petSpecies, petAge, petOwnerName, petContactInfo);
+                        boolean isPetValid = isPetValid(petCareScheduler, newPet);
+                        if (isPetValid) {
+                            petCareScheduler.put(petId, newPet);
+                            System.err.println(petId + ", named " + petName + ", added successfully.");
+                        }
+                    } catch (InvalidPetException ipe) {
+                        System.out.println("Invalid pet!");
+                    }
+                    continue;
+                case "sa":
+                    try {
+                        optionsForSerachingPet(
+                            () -> {
+                                String searchedPetId = getPetId();
+                                Pet petToBeSearched = serachPetBaseOnId(petCareScheduler, searchedPetId);
+                                Appointment newAppointment = createAppointment();
+                                petToBeSearched.setAppointment(newAppointment);
+                                petCareScheduler.put(searchedPetId, petToBeSearched);
+                                System.out.println("A new appointment is created for Pet named " + petToBeSearched.getName() + "(ID: " + searchedPetId + ")");
+                            },
+                            () -> {
+                                String searchedPetName = getPetName();
+                                String searchedOwnerName = getPetOwnerName();
+                                String searchedContactInfo = getPetContactInfo();
+                                Pet petToBeSearched = serachPetBaseOnPetInfo(petCareScheduler, searchedPetName, searchedOwnerName, searchedContactInfo);
+                                String searchedPetId = findPetId(petCareScheduler, petToBeSearched);
+                                Appointment newAppointment = createAppointment();
+                                petToBeSearched.setAppointment(newAppointment);
+                                petCareScheduler.put(searchedPetId, petToBeSearched);
+                                System.out.println("A new appointment is created for Pet named " + searchedPetName + "(ID: " + searchedPetId + ")");
+                            }
+                        );
+                    } catch (DateTimeParseException dpe) {
+                        System.out.println("Incorrect format of date. Cannot serach pet.\n"+dpe);
+                    } catch (InvalidPetException ipe) {
+                        System.out.println("Incorrect date of pet. Cannot serach pet.\n"+ipe);
+                    }
+                    continue;
+                case "sd":
+                    try (PrintWriter writer = new PrintWriter(new FileWriter("Pets.txt"))) {
+                        for (Pet pet : petCareScheduler.values()) {
+                            writer.println(pet+"\n\n");
+                        }
+                        System.out.println("The entries are written to a file");
+                    } catch (IOException e) {
+                        System.err.println("Error writing to file: " + e.getMessage());
+                    } 
+                    continue;
+                case "R":
+                    System.out.println("Enter '1' to display all pets\n"
+                                    + "Enter '2' to display all appointments for a pet\n"
+                                    + "Enter '3' to display the upcoming appointments for all pets\n"
+                                    + "Enter '4' to display the past appointments for all pets");
+
+                        serachVariant = scanner.nextLine();
+
+                        switch (serachVariant) {
+                            case "1":
+                                for (Pet pet : petCareScheduler.values()) {
+                                    System.out.println(pet.toString());
+                                }
+                                break;
+                            case "2":
+                                try {
+                                    optionsForSerachingPet(
+                                        () -> {
+                                            String searchedPetId = getPetId();
+                                            Pet petToBeSearched = serachPetBaseOnId(petCareScheduler, searchedPetId);
+                                            for (Appointment a : petToBeSearched.getAppointments()) {
+                                                System.out.println(a.toString());
+                                            }
+                                        },
+                                        () -> {
+                                            String searchedPetName = getPetName();
+                                            String searchedOwnerName = getPetOwnerName();
+                                            String searchedContactInfo = getPetContactInfo();
+                                            Pet petToBeSearched = serachPetBaseOnPetInfo(petCareScheduler, searchedPetName, searchedOwnerName, searchedContactInfo);
+                                            findPetId(petCareScheduler, petToBeSearched);
+                                            for (Appointment a : petToBeSearched.getAppointments()) {
+                                                System.out.println(a.toString());
+                                            }
+                                        }
+                                    );
+                                } catch (DateTimeParseException dpe) {
+                                    System.out.println("Incorrect format of date. Cannot serach pet.\n"+dpe);
+                                } catch (InvalidPetException ipe) {
+                                    System.out.println("Incorrect date of pet. Cannot serach pet.\n"+ipe);
+                                }
+                                break;
+                            case "3":
+                                for (Pet pet : petCareScheduler.values()) {
+                                    Appointment upcomingAppointment = pet.showTheUpcomingAppointment();
+                                    if (upcomingAppointment != null) {
+                                        System.out.println(pet.getName() + " 's upcoming appointment: "+ upcomingAppointment.toString());
+                                    } else {
+                                        System.out.println("No upcoming appointment found from " + pet.getName());
+                                    }
+                                }
+                                break;
+                            case "4":
+                                for (Pet pet : petCareScheduler.values()) {
+                                    Appointment previousAppointment = pet.showThePreviousAppointment();
+                                    if (previousAppointment != null) {
+                                        System.out.println(pet.getName() + " 's previous appointment: "+ previousAppointment.toString());
+                                    } else {
+                                        System.out.println("No previous appointment found from " + pet.getName());
+                                    }
+                                }
+                                break;
+                            default:
+                                System.out.println("Invalid input!");
+                                break;
+                        }
+
+                    continue;
+                case "g":
+                    System.out.println("Enter '1' to report the pets with upcoming appointments in the next week\n"
+                            + "Enter '2' to report the pets overdue for a vet visit in the last 6 months.");
+                    String reportVariant = scanner.nextLine();
+                    LocalDate currenDate = LocalDate.now();
+                    switch (reportVariant) {
+                        case "1":
+                            LocalDate dateNextWeek = currenDate.plusDays(7);
+                            for (Pet p : petCareScheduler.values()) {
+                                for (Appointment a : p.getAppointments()) {
+                                    if (a.getDate().isAfter(currenDate) && a.getDate().isBefore(dateNextWeek)) {
+                                        System.out.println(p.getName() + " 's upcoming appointment(s) in the next week: " + a.toString());
+                                    }
+                                }
+                            }
+                            break;
+                        case "2":
+                            LocalDate dateSixMonthBefore = currenDate.minusMonths(6);
+                            for (Pet p : petCareScheduler.values()) {
+                                for (Appointment a : p.getAppointments()) {
+                                    if (a.getDate().isAfter(dateSixMonthBefore) 
+                                            && a.getDate().isBefore(currenDate)
+                                            && a.getType().equals(Type.VET_VISIT)
+                                            && a.getNotes().contains("overdue")) {
+                                        System.out.println(p.getName() + " 's overdue appointment(s) for a vet visit in the next week: " + a.toString());
+                                    }
+                                }
+                            }
+                            break;
+                        default:
+                            System.out.println("Invalid input!");
+                            break;
+                    }
+                    
+                    continue;
+                case "Exit":
+                    System.out.println("You exit.");
+                    isStay = false;
+                    break;
+                default:
+                    System.out.println("Invalid input, please try again.");
+                    continue;
+            }
+        }
+
+    }
+}
