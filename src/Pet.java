@@ -1,7 +1,7 @@
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.TreeSet;
 import java.util.Comparator;
+import java.util.TreeSet;
 
 class Pet {
     Comparator<Appointment> chronoOrder = Comparator
@@ -80,6 +80,10 @@ class Pet {
 
     public void setAppointment(Appointment appointment) {
         this.appointments.add(appointment);
+    }
+
+    public void setAppointments(TreeSet<Appointment> appointments) {
+        this.appointments = appointments;
     }
 
     @Override

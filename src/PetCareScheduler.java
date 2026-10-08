@@ -53,7 +53,7 @@ public class PetCareScheduler {
         System.out.println("Input the appointment Types (vet visit, vaccination, grooming, others).");
         String typeStr = scanner.nextLine();
         switch (typeStr) {
-            case "visit vet": 
+            case "vet visit": 
                 return Type.VET_VISIT;
             case "vaccination":
                 return Type.VACCINATION;
@@ -168,10 +168,10 @@ public class PetCareScheduler {
 
     @FunctionalInterface
     public interface PetSearchOption {
-        void select() throws InvalidPetException;
+        void select() throws InvalidPetException, InvalidAppointmentException;
     }
 
-    public static void optionsForSerachingPet(PetSearchOption option1, PetSearchOption option2) throws InvalidPetException {
+    public static void optionsForSerachingPet(PetSearchOption option1, PetSearchOption option2) throws InvalidPetException, InvalidAppointmentException {
         System.out.println("Enter '1' to serach by pet Id\n"
                             + "Enter '2' to search by pet infomation.");
         String serachVariant = scanner.nextLine();
@@ -186,6 +186,75 @@ public class PetCareScheduler {
         }
     }
 
+    public static Pet updatePet(Pet pet) {
+        System.out.println("Enter '1' to update the pet name\n"
+                + "Enter '2' to update the pet species\n"
+                + "Enter '3' to update the pet age\n"
+                + "Enter '4' to update the pet owner name\n"
+                + "Enter '5' to update the pet contact information");
+
+        String updatePetVariant = scanner.nextLine();
+
+        switch (updatePetVariant) {
+            case "1":
+                String petName = getPetName();
+                pet.setName(petName);
+                break;
+            case "2":
+                int petAge = getPetAge();
+                pet.setAge(petAge);
+                break;
+            case "3":
+                String petSpecies = getPetSpecies();
+                pet.setSpecies(petSpecies);
+                break;
+            case "4":
+                String petOwnerName = getPetOwnerName();
+                pet.setOwnerName(petOwnerName);
+                break;
+            case "5":
+                String petContactInfo = getPetContactInfo();
+                pet.setContactInfo(petContactInfo);
+                break;
+            default:
+                System.out.println("Wrong Input");
+        }
+
+        return pet;
+    }
+
+    public static Appointment updateAppointment(Appointment appointment) {
+        System.out.println("Enter '1' to update the appointment type\n"
+                + "Enter '2' to update the appointment notes\n"
+                + "Enter '3' to update the appointment date\n"
+                + "Enter '4' to update the appointment time");
+
+        String updatePetVariant = scanner.nextLine();
+
+        switch (updatePetVariant) {
+            case "1":
+                Type appointmentType = getAppointmenType();
+                appointment.setType(appointmentType);
+                break;
+            case "2":
+                String appointmentNote = getAppointmentNotes();
+                appointment.setNotes(appointmentNote);
+                break;
+            case "3":
+                LocalDate appointmentDate = getAppointmentDate();
+                appointment.setDate(appointmentDate);
+                break;
+            case "4":
+                LocalTime appLocalTime = getAppointmentTime();
+                appointment.getTime();
+                break;
+            default:
+                System.out.println("Wrong Input");
+        }
+
+        return appointment;
+    }
+
     public static void main(String[] args)  {
         
         HashMap<String, Pet> petCareScheduler = new HashMap<>();
@@ -198,7 +267,6 @@ public class PetCareScheduler {
         int petAge;
         String petOwnerName;
         String petContactInfo;
-        TreeSet<Appointment> appointments;
         Appointment appointment;
 
         String serachVariant;
@@ -206,6 +274,8 @@ public class PetCareScheduler {
         while (isStay) {
             System.out.println("Press 'r' to register pet\n"
                     + "'sa' to schedule appointment(s)\n"
+                    + "'up' to update pet information\n"
+                    + "'ua' to update appointment(s)\n"
                     + "'sd' to store data\n"
                     + "'R' to get all records\n"
                     + "'g' to generate the report to a file\n"
@@ -258,8 +328,87 @@ public class PetCareScheduler {
                         System.out.println("Incorrect format of date. Cannot serach pet.\n"+dpe);
                     } catch (InvalidPetException ipe) {
                         System.out.println("Incorrect date of pet. Cannot serach pet.\n"+ipe);
+                    } catch (InvalidAppointmentException iae) {
+                        System.out.println("Incorrect date of appointment. Cannot serach appointment.\n" + iae);
                     }
                     continue;
+                case "up":
+                    try {
+                        optionsForSerachingPet(
+                                () -> {
+                                    String searchedPetId = getPetId();
+                                    Pet petToBeSearched = serachPetBaseOnId(petCareScheduler, searchedPetId);
+                                    Pet updatedPet = updatePet(petToBeSearched);
+                                    petCareScheduler.put(searchedPetId, updatedPet);
+                                    System.out.println("Successfully updated.");
+                                },
+                                () -> {
+                                    String searchedPetName = getPetName();
+                                    String searchedOwnerName = getPetOwnerName();
+                                    String searchedContactInfo = getPetContactInfo();
+                                    Pet petToBeSearched = serachPetBaseOnPetInfo(petCareScheduler, searchedPetName, searchedOwnerName, searchedContactInfo);
+                                    String searchedPetId = findPetId(petCareScheduler, petToBeSearched);
+                                    Pet updatedPet = updatePet(petToBeSearched);
+                                    petCareScheduler.put(searchedPetId, updatedPet);
+                                    System.out.println("Successfully updated.");
+                                }
+                        );
+                    } catch (DateTimeParseException dpe) {
+                        System.out.println("Incorrect format of date. Cannot serach pet.\n" + dpe);
+                    } catch (InvalidPetException ipe) {
+                        System.out.println("Incorrect date of pet. Cannot serach pet.\n" + ipe);
+                    } catch (InvalidAppointmentException iae) {
+                        System.out.println("Incorrect date of appointment. Cannot serach appointment.\n" + iae);
+                    }
+                    continue;
+                case "ua":
+                    try {
+                        optionsForSerachingPet(
+                                () -> {
+                                    String searchedPetId = getPetId();
+                                    Pet petToBeSearched = serachPetBaseOnId(petCareScheduler, searchedPetId);
+                                    System.out.print("Find the appointment.");
+                                    Type appointmentTypeToBeSearched = getAppointmenType();
+                                    LocalDate appointmentDateToBeSearched = getAppointmentDate();
+                                    LocalTime appointmentTimeToBeSearched = getAppointmentTime();
+                                    TreeSet<Appointment> appointments = petToBeSearched.getAppointments();
+                                    Appointment searchedAppointment = searchAppointment(appointments, appointmentTypeToBeSearched, appointmentDateToBeSearched, appointmentTimeToBeSearched);
+                                    int searchedAppointmentIdx = petToBeSearched.getAppointments().headSet(searchedAppointment).size();
+                                    Appointment updatedAppointment = updateAppointment(searchedAppointment);
+                                    appointments.remove(searchedAppointmentIdx);
+                                    appointments.add(updatedAppointment);
+                                    petToBeSearched.setAppointments(appointments);
+                                    petCareScheduler.put(searchedPetId, petToBeSearched);
+                                    System.out.println("Successfully updated.");
+                                },
+                                () -> {
+                                    String searchedPetName = getPetName();
+                                    String searchedOwnerName = getPetOwnerName();
+                                    String searchedContactInfo = getPetContactInfo();
+                                    Pet petToBeSearched = serachPetBaseOnPetInfo(petCareScheduler, searchedPetName, searchedOwnerName, searchedContactInfo);
+                                    String searchedPetId = findPetId(petCareScheduler, petToBeSearched);
+                                    Type appointmentTypeToBeSearched = getAppointmenType();
+                                    LocalDate appointmentDateToBeSearched = getAppointmentDate();
+                                    LocalTime appointmentTimeToBeSearched = getAppointmentTime();
+                                    TreeSet<Appointment> appointments = petToBeSearched.getAppointments();
+                                    Appointment searchedAppointment = searchAppointment(appointments, appointmentTypeToBeSearched, appointmentDateToBeSearched, appointmentTimeToBeSearched);
+                                    int searchedAppointmentIdx = petToBeSearched.getAppointments().headSet(searchedAppointment).size();
+                                    Appointment updatedAppointment = updateAppointment(searchedAppointment);
+                                    appointments.remove(searchedAppointmentIdx);
+                                    appointments.add(updatedAppointment);
+                                    petToBeSearched.setAppointments(appointments);
+                                    petCareScheduler.put(searchedPetId, petToBeSearched);
+                                    System.out.println("Successfully updated.");
+                                }
+                        );
+                    } catch (DateTimeParseException dpe) {
+                        System.out.println("Incorrect format of date. Cannot serach pet.\n" + dpe);
+                    } catch (InvalidPetException ipe) {
+                        System.out.println("Incorrect date of pet. Cannot serach pet.\n" + ipe);
+                    } catch (InvalidAppointmentException iae) {
+                        System.out.println("Incorrect date of appointment. Cannot serach appointment.\n" + iae);
+                    }
+                    continue;    
                 case "sd":
                     try (PrintWriter writer = new PrintWriter(new FileWriter("Pets.txt"))) {
                         for (Pet pet : petCareScheduler.values()) {
@@ -309,6 +458,8 @@ public class PetCareScheduler {
                                     System.out.println("Incorrect format of date. Cannot serach pet.\n"+dpe);
                                 } catch (InvalidPetException ipe) {
                                     System.out.println("Incorrect date of pet. Cannot serach pet.\n"+ipe);
+                                } catch (InvalidAppointmentException iae) {
+                                    System.out.println("Incorrect date of appointment. Cannot serach appointment.\n" + iae);
                                 }
                                 break;
                             case "3":
