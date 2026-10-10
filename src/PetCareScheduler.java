@@ -1,4 +1,5 @@
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -79,9 +80,9 @@ public class PetCareScheduler {
     }
 
     public static LocalTime getAppointmentTime() {
-        System.out.println("Input the time in HH:mm:ss format:");
+        System.out.println("Input the time in HH:mm format:");
         String appointmentTimeStr = scanner.nextLine();
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
         LocalTime appointmentTime = LocalTime.parse(appointmentTimeStr, timeFormatter);
         return appointmentTime;
     }
@@ -246,7 +247,7 @@ public class PetCareScheduler {
                 break;
             case "4":
                 LocalTime appLocalTime = getAppointmentTime();
-                appointment.getTime();
+                appointment.setTime(appLocalTime);
                 break;
             default:
                 System.out.println("Wrong Input");
@@ -255,9 +256,178 @@ public class PetCareScheduler {
         return appointment;
     }
 
+    private static String jsonEscape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String jsonUnescape(String value) {
+        return value.replace("\\\"", "\"").replace("\\\\", "\\");
+    }
+    public static void savePets(HashMap<String, Pet> pets) throws IOException {
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+        DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
+        StringBuilder json = new StringBuilder();
+        json.append("[\n");
+        int petIndex = 0;
+        for (Pet pet : pets.values()) {
+            if (petIndex++ > 0) {
+                json.append(",\n");
+            }
+            json.append("  {\n");
+            json.append("    \"petId\": \"").append(jsonEscape(pet.getPetId())).append("\",\n");
+            json.append("    \"name\": \"").append(jsonEscape(pet.getName())).append("\",\n");
+            json.append("    \"species\": \"").append(jsonEscape(pet.getSpecies())).append("\",\n");
+            json.append("    \"age\": ").append(pet.getAge()).append(",\n");
+            json.append("    \"ownerName\": \"").append(jsonEscape(pet.getOwnerName())).append("\",\n");
+            json.append("    \"contactInfo\": \"").append(jsonEscape(pet.getContactInfo())).append("\",\n");
+            json.append("    \"registrationDate\": \"")
+                .append(pet.getRegistrationDate().format(dateFmt)).append("\",\n");
+            json.append("    \"appointments\": [\n");
+            int apptIndex = 0;
+            for (Appointment a : pet.getAppointments()) {
+                if (apptIndex++ > 0) {
+                    json.append(",\n");
+                }
+                json.append("      {");
+                json.append("\"type\": \"").append(a.getType().name()).append("\", ");
+                json.append("\"date\": \"").append(a.getDate().format(dateFmt)).append("\", ");
+                json.append("\"time\": \"").append(a.getTime().format(timeFmt)).append("\", ");
+                json.append("\"notes\": \"").append(jsonEscape(a.getNotes())).append("\"}");
+            }
+            json.append("\n    ]\n  }");
+        }
+        json.append("\n]\n");
+        try (PrintWriter writer = new PrintWriter(new FileWriter("Pets.json"))) {
+            writer.print(json);
+        }
+    }
+
+    public static HashMap<String, Pet> loadPets(String path) throws IOException {
+        HashMap<String, Pet> pets = new HashMap<>();
+        File file = new File(path);
+        if (!file.exists()) {
+            return pets;
+        }
+
+        String content;
+        try (Scanner fileScanner = new Scanner(file)) {
+            fileScanner.useDelimiter("\\A");
+            content = fileScanner.hasNext() ? fileScanner.next() : "";
+        }
+        if (content.isBlank()) {
+            return pets;
+        }
+
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+        DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
+
+        // savePets separates pets with "]\n  },\n  {", so this split stays outside appointment objects.
+        String body = content.trim();
+        if (body.startsWith("[")) {
+            body = body.substring(1);
+        }
+        if (body.endsWith("]")) {
+            body = body.substring(0, body.length() - 1);
+        }
+        String[] petChunks = body.split("\\]\\s*\\},\\s*\\{");
+
+        for (String chunk : petChunks) {
+            try {
+                String petId = field(chunk, "petId");
+                if (petId.isEmpty()) {
+                    continue;
+                }
+                Pet pet = new Pet(
+                        petId,
+                        field(chunk, "name"),
+                        field(chunk, "species"),
+                        Integer.parseInt(field(chunk, "age")),
+                        field(chunk, "ownerName"),
+                        field(chunk, "contactInfo"));
+                pet.setRegistrationDate(LocalDate.parse(field(chunk, "registrationDate"), dateFmt));
+
+                int apptKey = chunk.indexOf("\"appointments\"");
+                if (apptKey >= 0) {
+                    int open = chunk.indexOf('[', apptKey);
+                    if (open >= 0) {
+                        int close = chunk.indexOf(']', open);
+                        String apptBody = close >= 0
+                                ? chunk.substring(open + 1, close)
+                                : chunk.substring(open + 1);
+                        if (!apptBody.isBlank()) {
+                            String[] apptChunks = apptBody.split("\\},\\s*\\{");
+                            for (String apptChunk : apptChunks) {
+                                String typeName = field(apptChunk, "type");
+                                if (typeName.isEmpty()) {
+                                    continue;
+                                }
+                                Appointment appointment = new Appointment(
+                                        Type.valueOf(typeName),
+                                        LocalDate.parse(field(apptChunk, "date"), dateFmt),
+                                        LocalTime.parse(field(apptChunk, "time"), timeFmt),
+                                        field(apptChunk, "notes"));
+                                pet.setAppointment(appointment);
+                            }
+                        }
+                    }
+                }
+                pets.put(petId, pet);
+            } catch (DateTimeParseException | IllegalArgumentException e) {
+                System.err.println("Skipping unreadable pet record: " + e.getMessage());
+            }
+        }
+        return pets;
+    }
+
+    private static String field(String chunk, String key) {
+        String marker = "\"" + key + "\"";
+        int keyAt = chunk.indexOf(marker);
+        if (keyAt < 0) {
+            return "";
+        }
+        int colon = chunk.indexOf(':', keyAt + marker.length());
+        if (colon < 0) {
+            return "";
+        }
+        int valueStart = colon + 1;
+        while (valueStart < chunk.length() && Character.isWhitespace(chunk.charAt(valueStart))) {
+            valueStart++;
+        }
+        if (valueStart >= chunk.length()) {
+            return "";
+        }
+        if (chunk.charAt(valueStart) == '"') {
+            int valueEnd = valueStart + 1;
+            while (valueEnd < chunk.length()) {
+                if (chunk.charAt(valueEnd) == '\\' && valueEnd + 1 < chunk.length()) {
+                    valueEnd += 2;
+                    continue;
+                }
+                if (chunk.charAt(valueEnd) == '"') {
+                    break;
+                }
+                valueEnd++;
+            }
+            return jsonUnescape(chunk.substring(valueStart + 1, valueEnd));
+        }
+        int valueEnd = valueStart;
+        while (valueEnd < chunk.length() && Character.isDigit(chunk.charAt(valueEnd))) {
+            valueEnd++;
+        }
+        return chunk.substring(valueStart, valueEnd);
+    }
+
     public static void main(String[] args)  {
         
         HashMap<String, Pet> petCareScheduler = new HashMap<>();
+        try {
+            petCareScheduler.putAll(loadPets("Pets.json"));
+        } catch (IOException e) {
+            System.err.println("Could not read Pets.json: " + e.getMessage());
+        }
 
         boolean isStay = true;
 
@@ -373,9 +543,9 @@ public class PetCareScheduler {
                                     LocalTime appointmentTimeToBeSearched = getAppointmentTime();
                                     TreeSet<Appointment> appointments = petToBeSearched.getAppointments();
                                     Appointment searchedAppointment = searchAppointment(appointments, appointmentTypeToBeSearched, appointmentDateToBeSearched, appointmentTimeToBeSearched);
-                                    int searchedAppointmentIdx = petToBeSearched.getAppointments().headSet(searchedAppointment).size();
+                                    // int searchedAppointmentIdx = petToBeSearched.getAppointments().headSet(searchedAppointment).size();
                                     Appointment updatedAppointment = updateAppointment(searchedAppointment);
-                                    appointments.remove(searchedAppointmentIdx);
+                                    appointments.remove(searchedAppointment);
                                     appointments.add(updatedAppointment);
                                     petToBeSearched.setAppointments(appointments);
                                     petCareScheduler.put(searchedPetId, petToBeSearched);
@@ -392,9 +562,9 @@ public class PetCareScheduler {
                                     LocalTime appointmentTimeToBeSearched = getAppointmentTime();
                                     TreeSet<Appointment> appointments = petToBeSearched.getAppointments();
                                     Appointment searchedAppointment = searchAppointment(appointments, appointmentTypeToBeSearched, appointmentDateToBeSearched, appointmentTimeToBeSearched);
-                                    int searchedAppointmentIdx = petToBeSearched.getAppointments().headSet(searchedAppointment).size();
+                                    // int searchedAppointmentIdx = petToBeSearched.getAppointments().headSet(searchedAppointment).size();
                                     Appointment updatedAppointment = updateAppointment(searchedAppointment);
-                                    appointments.remove(searchedAppointmentIdx);
+                                    appointments.remove(searchedAppointment);
                                     appointments.add(updatedAppointment);
                                     petToBeSearched.setAppointments(appointments);
                                     petCareScheduler.put(searchedPetId, petToBeSearched);
@@ -410,14 +580,12 @@ public class PetCareScheduler {
                     }
                     continue;    
                 case "sd":
-                    try (PrintWriter writer = new PrintWriter(new FileWriter("Pets.txt"))) {
-                        for (Pet pet : petCareScheduler.values()) {
-                            writer.println(pet+"\n\n");
-                        }
+                    try {
+                        savePets(petCareScheduler);
                         System.out.println("The entries are written to a file");
                     } catch (IOException e) {
                         System.err.println("Error writing to file: " + e.getMessage());
-                    } 
+                    }
                     continue;
                 case "R":
                     System.out.println("Enter '1' to display all pets\n"

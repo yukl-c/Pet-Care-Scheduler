@@ -2,6 +2,7 @@
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 enum Type {
     VET_VISIT, VACCINATION, GROOMING, OTHERS
@@ -11,7 +12,7 @@ class Appointment implements Comparable<Appointment> {
 
     private Type type;
     private LocalDate date = LocalDate.now();
-    private LocalTime time = LocalTime.now();
+    private LocalTime time = LocalTime.now().truncatedTo(ChronoUnit.MINUTES);
     private String notes;
 
     public Appointment(Type type) {

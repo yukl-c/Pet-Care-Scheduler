@@ -1,5 +1,6 @@
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.TreeSet;
 
@@ -58,6 +59,10 @@ class Pet {
         return this.appointments;
     } 
 
+    public void setPetId(String petId) {
+        this.petId = petId;
+    }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -76,6 +81,10 @@ class Pet {
 
     public void setContactInfo(String contactInfo) {
         this.contactInfo = contactInfo;
+    }
+
+    public void setRegistrationDate(LocalDate registrationDate) {
+        this.registrationDate = registrationDate;
     }
 
     public void setAppointment(Appointment appointment) {
@@ -101,6 +110,7 @@ class Pet {
         ", aged " + Integer.toString(this.age) + 
         ", owned by " + this.ownerName +
         "(contact info: " + this.contactInfo + ") " +
+        ", registration date: " + this.registrationDate.format(DateTimeFormatter.ofPattern("MM/dd/yyyy")) +
         ", appointments: " + appointmentsStr;
 
     }

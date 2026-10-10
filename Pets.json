@@ -1,0 +1,28 @@
+[
+  {
+    "petId": "PET_2",
+    "name": "Catty",
+    "species": "Cat",
+    "age": 3,
+    "ownerName": "Ben",
+    "contactInfo": "2345678",
+    "registrationDate": "10/09/2026",
+    "appointments": [
+      {"type": "VET_VISIT", "date": "01/01/2026", "time": "13:00", "notes": ""},
+      {"type": "VACCINATION", "date": "10/09/2026", "time": "17:44", "notes": "first time"},
+      {"type": "OTHERS", "date": "11/11/2026", "time": "14:00", "notes": "body check"}
+    ]
+  },
+  {
+    "petId": "PET_1",
+    "name": "Buddy",
+    "species": "Dog",
+    "age": 12,
+    "ownerName": "Him",
+    "contactInfo": "12345678",
+    "registrationDate": "10/09/2026",
+    "appointments": [
+      {"type": "GROOMING", "date": "10/10/2026", "time": "12:30", "notes": ""}
+    ]
+  }
+]
