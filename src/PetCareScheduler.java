@@ -135,6 +135,7 @@ public class PetCareScheduler {
 
     public static Pet serachPetBaseOnId(HashMap<String, Pet> petCareScheduler, String petId) throws InvalidPetException {
         Pet serachedPet = petCareScheduler.get(petId);
+        System.out.println("searched pet: " + serachedPet.toString());
         if (serachedPet == null) {
             throw new InvalidPetException();
         }
@@ -446,6 +447,8 @@ public class PetCareScheduler {
                     + "'sa' to schedule appointment(s)\n"
                     + "'up' to update pet information\n"
                     + "'ua' to update appointment(s)\n"
+                    + "'dp' to delete pet information\n"
+                    + "'da' to delete appointment(s)\n"
                     + "'sd' to store data\n"
                     + "'R' to get all records\n"
                     + "'g' to generate the report to a file\n"
@@ -496,6 +499,8 @@ public class PetCareScheduler {
                         );
                     } catch (DateTimeParseException dpe) {
                         System.out.println("Incorrect format of date. Cannot serach pet.\n"+dpe);
+                    } catch (NullPointerException npe) {
+                        System.out.println("Null value found.\n"+npe);
                     } catch (InvalidPetException ipe) {
                         System.out.println("Incorrect date of pet. Cannot serach pet.\n"+ipe);
                     } catch (InvalidAppointmentException iae) {
@@ -525,6 +530,8 @@ public class PetCareScheduler {
                         );
                     } catch (DateTimeParseException dpe) {
                         System.out.println("Incorrect format of date. Cannot serach pet.\n" + dpe);
+                    } catch (NullPointerException npe) {
+                        System.out.println("Null value found.\n" + npe);
                     } catch (InvalidPetException ipe) {
                         System.out.println("Incorrect date of pet. Cannot serach pet.\n" + ipe);
                     } catch (InvalidAppointmentException iae) {
@@ -573,12 +580,89 @@ public class PetCareScheduler {
                         );
                     } catch (DateTimeParseException dpe) {
                         System.out.println("Incorrect format of date. Cannot serach pet.\n" + dpe);
+                    } catch (NullPointerException npe) {
+                        System.out.println("Null value found.\n" + npe);
                     } catch (InvalidPetException ipe) {
                         System.out.println("Incorrect date of pet. Cannot serach pet.\n" + ipe);
                     } catch (InvalidAppointmentException iae) {
                         System.out.println("Incorrect date of appointment. Cannot serach appointment.\n" + iae);
                     }
                     continue;    
+                case "dp":
+                    try {
+                        optionsForSerachingPet(
+                                () -> {
+                                    String searchedPetId = getPetId();
+                                    Pet petToBeSearched = serachPetBaseOnId(petCareScheduler, searchedPetId);
+                                    petCareScheduler.remove(searchedPetId);
+                                    System.out.println("Successfully deleted pet.");
+                                },
+                                () -> {
+                                    String searchedPetName = getPetName();
+                                    String searchedOwnerName = getPetOwnerName();
+                                    String searchedContactInfo = getPetContactInfo();
+                                    Pet petToBeSearched = serachPetBaseOnPetInfo(petCareScheduler, searchedPetName, searchedOwnerName, searchedContactInfo);
+                                    String searchedPetId = findPetId(petCareScheduler, petToBeSearched);
+                                    petCareScheduler.remove(searchedPetId);
+                                    System.out.println("Successfully deleted pet.");
+                                }
+                        );
+                    } catch (DateTimeParseException dpe) {
+                        System.out.println("Incorrect format of date. Cannot serach pet.\n" + dpe);
+                    } catch (NullPointerException npe) {
+                        System.out.println("Null value found.\n" + npe);
+                    } catch (InvalidPetException ipe) {
+                        System.out.println("Incorrect date of pet. Cannot serach pet.\n" + ipe);
+                    } catch (InvalidAppointmentException iae) {
+                        System.out.println("Incorrect date of appointment. Cannot serach appointment.\n" + iae);
+                    }
+                    continue;
+                case "da":
+                    try {
+                        optionsForSerachingPet(
+                                () -> {
+                                    String searchedPetId = getPetId();
+                                    Pet petToBeSearched = serachPetBaseOnId(petCareScheduler, searchedPetId);
+                                    System.out.print("Find the appointment.");
+                                    Type appointmentTypeToBeSearched = getAppointmenType();
+                                    LocalDate appointmentDateToBeSearched = getAppointmentDate();
+                                    LocalTime appointmentTimeToBeSearched = getAppointmentTime();
+                                    TreeSet<Appointment> appointments = petToBeSearched.getAppointments();
+                                    Appointment searchedAppointment = searchAppointment(appointments, appointmentTypeToBeSearched, appointmentDateToBeSearched, appointmentTimeToBeSearched);
+                                    // int searchedAppointmentIdx = petToBeSearched.getAppointments().headSet(searchedAppointment).size();
+                                    appointments.remove(searchedAppointment);
+                                    petToBeSearched.setAppointments(appointments);
+                                    petCareScheduler.put(searchedPetId, petToBeSearched);
+                                    System.out.println("Successfully updated appoinment.");
+                                },
+                                () -> {
+                                    String searchedPetName = getPetName();
+                                    String searchedOwnerName = getPetOwnerName();
+                                    String searchedContactInfo = getPetContactInfo();
+                                    Pet petToBeSearched = serachPetBaseOnPetInfo(petCareScheduler, searchedPetName, searchedOwnerName, searchedContactInfo);
+                                    String searchedPetId = findPetId(petCareScheduler, petToBeSearched);
+                                    Type appointmentTypeToBeSearched = getAppointmenType();
+                                    LocalDate appointmentDateToBeSearched = getAppointmentDate();
+                                    LocalTime appointmentTimeToBeSearched = getAppointmentTime();
+                                    TreeSet<Appointment> appointments = petToBeSearched.getAppointments();
+                                    Appointment searchedAppointment = searchAppointment(appointments, appointmentTypeToBeSearched, appointmentDateToBeSearched, appointmentTimeToBeSearched);
+                                    // int searchedAppointmentIdx = petToBeSearched.getAppointments().headSet(searchedAppointment).size();
+                                    appointments.remove(searchedAppointment);
+                                    petToBeSearched.setAppointments(appointments);
+                                    petCareScheduler.put(searchedPetId, petToBeSearched);
+                                    System.out.println("Successfully deleted appointment.");
+                                }
+                        );
+                    } catch (DateTimeParseException dpe) {
+                        System.out.println("Incorrect format of date. Cannot serach pet.\n" + dpe);
+                    } catch (NullPointerException npe) {
+                        System.out.println("Null value found.\n" + npe);
+                    } catch (InvalidPetException ipe) {
+                        System.out.println("Incorrect date of pet. Cannot serach pet.\n" + ipe);
+                    } catch (InvalidAppointmentException iae) {
+                        System.out.println("Incorrect date of appointment. Cannot serach appointment.\n" + iae);
+                    }
+                    continue;
                 case "sd":
                     try {
                         savePets(petCareScheduler);
@@ -624,6 +708,8 @@ public class PetCareScheduler {
                                     );
                                 } catch (DateTimeParseException dpe) {
                                     System.out.println("Incorrect format of date. Cannot serach pet.\n"+dpe);
+                                } catch (NullPointerException npe) {
+                                    System.out.println("Null value found.\n" + npe);
                                 } catch (InvalidPetException ipe) {
                                     System.out.println("Incorrect date of pet. Cannot serach pet.\n"+ipe);
                                 } catch (InvalidAppointmentException iae) {
